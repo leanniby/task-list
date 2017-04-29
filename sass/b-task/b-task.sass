@@ -1,0 +1,46 @@
+.b-task
+  position: relative
+  width: 100%
+  margin-top: 1em
+  margin-bottom: 1em
+  padding: 10px
+  border: 1px solid #bbbbbb
+  border-radius: 4px
+  &--complete
+    background-color: #bae5bb
+  &__title
+    margin-bottom: 0.5em
+    word-wrap: break-word
+    &[contentEditable=true]
+      border-radius: 3px
+      border: 1px solid #cccccc
+      transition: border linear 0.2s, box-shadow linear 0.2s
+      box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6)
+      border-color: rgba(82, 168, 236, 0.8)
+      outline: 0
+  &__delete-task
+    float: right
+    margin-left: 10px
+    min-width: 45px
+  &__progress
+    float: right
+    @include tablet
+      width: 115px
+  &__step
+    position: relative
+    @include clearfix
+    margin-bottom: 1em
+  &__name-step
+    margin-left: 1em
+    min-height: 30px
+    padding-top: 0.3em
+    word-wrap: break-word
+  &__status-step
+    float: right
+    margin-top: 0.5em
+    @include tablet
+      width: 150px
+  &__delete-step
+    float: right
+    margin-left: 10px
+    min-width: 45px

@@ -1,0 +1,16 @@
+.b-label
+  padding: 0 1em
+  border-radius: 0.5em
+  color: white
+  &[data-step-progress=to-do]
+    background: #b94a48
+    &:before
+      content: 'To do'
+  &[data-step-progress=in-progress]
+    background: #f89406
+    &:before
+      content: 'In progress'
+  &[data-step-progress=done]
+    background: #468847
+    &:before
+      content: 'Done'

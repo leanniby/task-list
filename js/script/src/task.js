@@ -1,138 +1,170 @@
-const PROGRESS_STEP = ['to-do', 'in-progress', 'done'];
-let db = {};
+;(function () {
+    const PROGRESS_STEP = ['to-do', 'in-progress', 'done'];
+    let $taskList = {};
 
-function initTasks() {
-    let $taskList = $('.js-task-list');
-    db = JSON.parse(localStorage.getItem('db')) || { tasks: [] };
+    function initTasks() {
+        $taskList = $('.js-task-list');
+        let tasks = JSON.parse(localStorage.getItem('db')).tasks || {tasks: []};
+        tasks.forEach(function (task) {
+            let $task = showTask(task);
+            $.data($task, 'id', task.id);
+            $.data($task, 'name', task.name);
+            $taskList.append($task);
+        });
 
-    let tasks = db.tasks;
-    tasks.forEach(showTask);
-
-    $('.js-task__new-task').on('click', newTask);
+        $('body').on('click', '.js-task__new-task', function() {
+            return $taskList.append(newTask);
+        });
+        $taskList.on('click', '.js-task__delete-task', deleteTask);
+        $taskList.on('click', '.js-task__new-step', newStep);
+        $taskList.on('click', '.js-task__delete-step', deleteStep);
+        $taskList.on('click', '.js-task__up-progress', upProgress);
+        $taskList.on('dblclick', '.js-text-edit', nameEdit);
+    }
 
     function newTask() {
-        let newID = newId(tasks);
-        tasks.push({
-            id: newID,
-            name: 'Task ' + newID,
-            steps: []
+        let $taskList = $('.js-task-list');
+        let newID = 0;
+        $taskList.children('.js-task').each(function () {
+            let curID = $(this).data('id');
+            if (curID >= newID) {
+                newID = curID+1;
+            }
         });
-        showTask(tasks[tasks.length-1]);
+
+        let task = {
+            id: newID,
+            name: 'Task '+(newID+1)
+        };
+        $taskList.append(showTask(task));
+        saveDb();
     }
 
     function showTask(task) {
         task.steps = task.steps || [];
-        let steps = task.steps;
 
-        let $task = $(`<article class='b-task js-task' id='task[${task.id}]'>
-                    <button class='b-task__delete-task b-button js-task__delete-task'><i class="fa fa-times fa-lg"></i></i></button>
-                    <h2 class='b-task__progress js-task_progress'></h2>
-                    <h2 class='b-task__title js-text-edit'>${ task.name }</h2>
-                    <ul class='b-task__steps-list js-step-list'>
-                    </ul>
-                    <button class='b-button js-task__new-step'><i class="fa fa-plus-circle" aria-hidden="true"></i> New step</button>
-                </article>`);
-        let $taskProgress = $task.find('.js-task_progress');
+        let $task = $(`<article class='b-task js-task' id='task[${ task.id }]'>
+                        <button class='b-task__delete-task b-button js-task__delete-task'><i class="fa fa-times fa-lg"></i></i></button>
+                        <h2 class='b-task__progress js-task_progress'></h2>
+                        <h2 class='b-task__title js-text-edit'>${ task.name }</h2>
+                        <!--<input class='b-task__title js-text-edit' value='${ task.name }'>-->
+                        <ul class='b-task__steps-list js-step-list'>
+                        </ul>
+                        <button class='b-button js-task__new-step'><i class="fa fa-plus-circle" aria-hidden="true"></i> New step</button>
+                    </article>`);
+       $task.data('id', task.id);
+       $task.data('name', task.name);
+
         let $stepList = $task.find('.js-step-list');
-        $taskList.append($task);
+        task.steps.forEach(function(step) {
+            $stepList.append(showStep(step))
+        });
+        updateTaskProgress($task);
+        return $task;
+    }
 
-        $task.find('> .js-text-edit').on('dblclick', nameEdit(task));
-        $task.find('.js-task__delete-task').on('click', deleteTask);
-        $task.find('.js-task__new-step').on('click', newStep);
-        updateTaskProgress();
+    function deleteTask() {
+        let $task = $(this).parent('.js-task');
+        $task.remove();
+        saveDb();
+    }
 
-        steps.forEach(showStep);
-        
-        function nameEdit(source) {
-            return function () {
-                let $this = $(this);
-                $this.attr('contentEditable', 'true').focus();
-                $this.on('keypress blur', function (e) {
-                    if (e.which != 13 && e.which != 0)
-                        return;
-                    if ($this.text() == ''){
-                        $this.text('_')
-                    }
-                    $this.attr('contentEditable', 'false');
-                    source.name = $this.text();
-                });
+    function updateTaskProgress($source) {
+        let $task = $source.closest('.js-task');
+        let $taskProgress = $task.find('.js-task_progress');
+        let allSteps = $task.find('.js-step').length;
+        let completeSteps = $task.find('[data-step-progress="done"]').length;
+        $taskProgress.text(allSteps ? completeSteps+'/'+allSteps : '-/-');
+        $task.toggleClass('b-task--complete', allSteps > 0 && allSteps === completeSteps);
+    }
+
+    function newStep() {
+        let $stepList = $(this).siblings('.js-step-list');
+        let newID = 0;
+        $stepList.children('.js-step').each(function () {
+            let curID = $(this).data('id');
+            if (curID >= newID) {
+                newID = curID+1;
             }
-        }
+        });
+        let step = {
+            id: newID,
+            name: 'Step '+(newID+1),
+            progress: PROGRESS_STEP[0]
+        };
 
-        function updateTaskProgress() {
-            let allSteps = steps.length;
-            let completeSteps = steps.filter( e => e.progress == 'done').length;
-            if (!allSteps)
-                $taskProgress.text(allSteps);
-            else
-                $taskProgress.text(completeSteps+'/'+allSteps);
-            if (completeSteps == allSteps && allSteps)
-                $task.addClass('b-task--complete');
-            else
-                $task.removeClass('b-task--complete');
-        }
+        $stepList.append(showStep(step));
+        let $task = $stepList.closest('.js-task');
+        updateTaskProgress($task);
+        saveDb();
+    }
 
-        function deleteTask() {
-            $task.remove();
-            removeByID(tasks, task.id);
-        }
+    function showStep(step) {
+        let $step = $(`<li class='b-task__step js-step' id='step[${ step.id }]'>
+                        <button class='b-task__delete-step b-button js-task__delete-step'><i class="fa fa-trash-o fa-lg"></i></button>
+                        <div class='b-task__status-step'>
+                            <span class='b-label js-task__up-progress' data-step-progress='${ step.progress }'></span>
+                        </div>
+                        <h3 class='b-task__name-step js-text-edit'>${ step.name }</h3>
+                    </li>`);
+        $step.data('id', step.id);
+        $step.data('name', step.name);
+        $step.data('progress', step.progress);
 
-        function newStep() {
-            let newID = newId(steps);
-            steps.push({
-                id: newID,
-                name: 'Step '+newID,
-                progress: PROGRESS_STEP[0]
-            });
-            showStep(steps[steps.length-1]);
-        }
+        return $step;
+    }
 
-        function showStep(step) {
-            let $step = $(`<li class='b-task__step' id='step[${step.id}]'>
-                    <button class='b-task__delete-step b-button js-task__delete-step'><i class="fa fa-trash-o fa-lg"></i></button>
-                    <div class='b-task__status-step'>
-                        <span class='b-label js-task__up-progress' data-step-progress='${ step.progress }'></span>
-                    </div>
-                    <h3 class='b-task__name-step js-text-edit'>${ step.name }</h3>
-                </li>`);
+    function upProgress() {
+        let $this = $(this);
+        let $task = $this.closest('.js-task');
+        let oldProgress = $this.attr('data-step-progress');
+        let newProgress = PROGRESS_STEP[(PROGRESS_STEP.findIndex(x => x === oldProgress) + 1) % PROGRESS_STEP.length];
+        $this.attr('data-step-progress', newProgress);
+        updateTaskProgress($task);
+        saveDb();
+    }
 
-            $step.find('.js-task__delete-step').on('click', deleteStep);
-            $step.find('.js-task__up-progress').on('click', upProgress);
-            $step.find('> .js-text-edit').on('dblclick', nameEdit(step));
-            $stepList.append($step);
-            updateTaskProgress();
+    function deleteStep() {
+        let $this = $(this);
+        let $task = $this.closest('.js-task');
+        let $step = $this.closest('.b-task__step');
+        $step.remove();
+        updateTaskProgress($task);
+        saveDb();
+    }
 
-            function upProgress() {
-                let $this = $(this);
-                let oldProgress = $this.attr('data-step-progress');
-                let newState = PROGRESS_STEP[(PROGRESS_STEP.findIndex(x => x == oldProgress) + 1) % PROGRESS_STEP.length];
-                $this.attr('data-step-progress', newState);
-
-                step.progress = newState;
-                updateTaskProgress();
+    function nameEdit() {
+        let $this = $(this);
+        let $input = $(`<input type='text' value='${ $this.text() }'>`);
+        $input.addClass($this.attr('class'));
+        $this.hide().after($input);
+        $input.focus();
+        $input.on('change blur', function () {
+            if ($input.val() === ''){
+                $input.val('_');
             }
-
-            function deleteStep() {
-                $step.remove();
-                removeByID(steps, step.id);
-                updateTaskProgress();
-            }
-        }
+            $this.show().text($input.val());
+            $input.remove();
+            $this.closest('.js-task, .js-step').data('name', $input.val());
+            saveDb();
+        });
     }
 
     function saveDb() {
+        let db = { tasks: [] };
+        $taskList.find('.js-task').each(function () {
+            let $this = $(this);
+            let task = $this.data();
+            task.steps = [];
+            $this.find('.js-step').each(function () {
+                let $this = $(this);
+                let step = $this.data();
+                task.steps.push(step);
+            });
+            db.tasks.push(task);
+        });
         localStorage.setItem('db', JSON.stringify(db));
     }
 
-    $(window).on( 'unload', saveDb);
-}
-
-function newId(array) {
-    return array.reduce( (res,e) => e.id > res ? e.id : res, -1) + 1;
-}
-
-function removeByID(array, id) {
-    return array.splice(array.findIndex( e => id == e.id) ,1);
-}
-
-$(document).ready(initTasks);
+    $(document).ready(initTasks);
+} )();

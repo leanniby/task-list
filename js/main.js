@@ -1,2 +1,2 @@
-require("./script/src/task.js");
+require("./script/src/store.js");
 require("../sass/style.sass");

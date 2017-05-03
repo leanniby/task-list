@@ -63,21 +63,73 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 2);
+/******/ 	return __webpack_require__(__webpack_require__.s = 3);
 /******/ })
 /************************************************************************/
 /******/ ([
-/* 0 */,
+/* 0 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+function textEdit(handler) {
+    return function () {
+        var $this = $(this);
+        var $input = $('<input type=\'text\'>');
+        $this.hide().after($input);
+        $input.val($this.text()).addClass($this.attr('class')).focus();
+        $input.on('change blur', changeEdit);
+
+        function changeEdit() {
+            var text = $input.val();
+            if (text === '') {
+                text = '_';
+            }
+            $this.show().text(text);
+            $input.remove();
+            handler($this, text);
+        }
+    };
+}
+
+exports.textEdit = textEdit;
+
+/***/ }),
 /* 1 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _taskList = __webpack_require__(5);
+
+var _db = __webpack_require__(15);
+
+var _db2 = _interopRequireDefault(_db);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+$(document).ready(function () {
+    var db = new _db2.default();
+    db.connect();
+    (0, _taskList.initTaskList)(db);
+});
+
+/***/ }),
+/* 2 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(3);
+var content = __webpack_require__(6);
 if(typeof content === 'string') content = [[module.i, content, '']];
 // add the styles to the DOM
-var update = __webpack_require__(5)(content, {});
+var update = __webpack_require__(8)(content, {});
 if(content.locals) module.exports = content.locals;
 // Hot Module Replacement
 if(false) {
@@ -94,31 +146,191 @@ if(false) {
 }
 
 /***/ }),
-/* 2 */
+/* 3 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-__webpack_require__(12);
 __webpack_require__(1);
+__webpack_require__(2);
 
 /***/ }),
-/* 3 */
+/* 4 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(4)(undefined);
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.showStep = exports.initStepList = exports.PROGRESS_STEP = undefined;
+
+var _libs = __webpack_require__(0);
+
+var PROGRESS_STEP = ['to-do', 'in-progress', 'done'];
+var db = void 0;
+
+function initStepList(_db, $taskList) {
+    db = _db;
+
+    $taskList.on('click', '.js-step__new-step', newStep);
+    $taskList.on('dblclick', '.js-step__name-edit', (0, _libs.textEdit)(nameChange));
+    $taskList.on('click', '.js-step__up-progress', upProgress);
+    $taskList.on('click', '.js-step__delete-step', deleteStep);
+}
+
+function showStep(step) {
+    var $step = $('<li class=\'b-task__step js-step\' data-step-id=\'' + step.id + '\'>\n                    <button class=\'b-task__delete-step b-button js-step__delete-step\' data-action=\'delete-step\'><i class="fa fa-trash-o fa-lg"></i></button>\n                    <div class=\'b-task__status-step\'>\n                        <span class=\'b-label js-step__up-progress\' data-step-progress=\'' + step.progress + '\' data-action=\'change-step-progress\'></span>\n                    </div>\n                    <h3 class=\'b-task__name-step js-step__name-edit\'>' + step.name + '</h3>\n                </li>');
+    return $step;
+}
+
+function newStep() {
+    var taskId = $(this).closest('.js-task').data('task-id');
+    var newStep = db.newStep(taskId);
+    db.save();
+
+    var $stepList = $(this).siblings('.js-step-list');
+    return $stepList.append(showStep(newStep));
+}
+
+function nameChange($this, text) {
+    var $step = $this.closest('.js-step');
+    var stepId = $step.data('step-id');
+    var $task = $step.closest('.js-task');
+    var taskId = $task.data('task-id');
+    db.getStep(stepId, taskId).name = text;
+    db.save();
+}
+
+function upProgress() {
+    var $this = $(this);
+    var $step = $this.closest('.js-step');
+    var stepId = $step.data('step-id');
+    var $task = $step.closest('.js-task');
+    var taskId = $task.data('task-id');
+    var oldProgress = $this.attr('data-step-progress');
+    var newProgress = PROGRESS_STEP[(PROGRESS_STEP.findIndex(function (x) {
+        return x === oldProgress;
+    }) + 1) % PROGRESS_STEP.length];
+
+    db.getStep(taskId, stepId).progress = newProgress;
+    db.save();
+
+    $this.attr('data-step-progress', newProgress);
+}
+
+function deleteStep() {
+    var $step = $(this).closest('.js-step');
+    var stepId = $step.data('step-id');
+    var $task = $step.closest('.js-task');
+    var taskId = $task.data('task-id');
+    db.deleteStep(taskId, stepId);
+    db.save();
+    $step.remove();
+}
+
+exports.PROGRESS_STEP = PROGRESS_STEP;
+exports.initStepList = initStepList;
+exports.showStep = showStep;
+
+/***/ }),
+/* 5 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.initTaskList = undefined;
+
+var _libs = __webpack_require__(0);
+
+var _stepList = __webpack_require__(4);
+
+var $taskList = {};
+var db = void 0;
+
+function initTaskList(_db) {
+    db = _db;
+    var tasks = db.tasks;
+
+    $taskList = $('.js-task-list');
+    tasks.forEach(function (task) {
+        $taskList.append(showTask(task));
+    });
+
+    $('body').on('click', '.js-task__new-task', newTask);
+    (0, _stepList.initStepList)(_db, $taskList, updateTaskProgress);
+    $taskList.on('click', '.js-task', updateTaskProgress);
+    $taskList.on('dblclick', '.js-task__edit-name', (0, _libs.textEdit)(nameChange));
+}
+
+function showTask(task) {
+    task.steps = task.steps || [];
+
+    var $task = $('<article class=\'b-task js-task\' data-task-id=\'' + task.id + '\'>\n                    <button class=\'b-task__delete-task b-button js-task__delete-task\' data-action=\'delete-task\'><i class="fa fa-times fa-lg"></i></i></button>\n                    <h2 class=\'b-task__progress js-task_progress\'></h2>\n                    <h2 class=\'b-task__title js-task__edit-name\' data-action=\'edit-name-task\'>' + task.name + '</h2>\n                    <!--<input class=\'b-task__title js-text-edit\' value=\'' + task.name + '\'>-->\n                    <ul class=\'b-task__steps-list js-step-list\'>\n                    </ul>\n                    <button class=\'b-button js-step__new-step\' data-action=\'add-step\'><i class="fa fa-plus-circle" aria-hidden="true"></i> New step</button>\n                </article>');
+    updateTaskProgress.call($task, { action: 'change-step-progress' });
+    var $stepList = $task.find('.js-step-list');
+    task.steps.forEach(function (step) {
+        $stepList.append((0, _stepList.showStep)(step));
+    });
+    return $task;
+}
+
+function newTask() {
+    var newTask = db.newTask();
+    db.save();
+    return $taskList.append(showTask(newTask));
+}
+
+function nameChange($this, text) {
+    var taskId = $this.closest('.js-task').data('task-id');
+    db.getTask(taskId).name = text;
+    db.save();
+}
+
+function updateTaskProgress(e) {
+    var action = e.action || $(e.target).data('action');
+    var $task = $(this);
+    var taskId = $task.data('task-id');
+    if (action === 'delete-step' || action === 'add-step' || action === 'change-step-progress') {
+        var $taskProgress = $task.find('.js-task_progress');
+        var steps = db.getTask(taskId).steps;
+        var allSteps = steps.length;
+        var completeSteps = steps.filter(function (e) {
+            return e.progress === _stepList.PROGRESS_STEP[_stepList.PROGRESS_STEP.length - 1];
+        }).length;
+        $taskProgress.text(allSteps ? completeSteps + '/' + allSteps : '-/-');
+        $task.toggleClass('b-task--complete', allSteps > 0 && allSteps === completeSteps);
+    } else if (action === 'delete-task') {
+        db.deleteTask($task.data('task-id'));
+        db.save();
+        $task.remove();
+    }
+}
+
+exports.initTaskList = initTaskList;
+
+/***/ }),
+/* 6 */
+/***/ (function(module, exports, __webpack_require__) {
+
+exports = module.exports = __webpack_require__(7)(undefined);
 // imports
 
 
 // module
-exports.push([module.i, "h1 {\n  font-size: 160%; }\n\nh2 {\n  font-size: 140%; }\n\nh3 {\n  font-size: 100%; }\n\n.b-body {\n  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;\n  font-size: 0.0625px;\n  font-size: 1em; }\n  @media (min-width: 768px) {\n    .b-body {\n      font-size: 0.07031px;\n      font-size: 1.125em; } }\n  @media (min-width: 1024px) {\n    .b-body {\n      font-size: 0.07813px;\n      font-size: 1.25em; } }\n\n.wrapper {\n  max-width: 960px;\n  margin-left: auto;\n  margin-right: auto;\n  padding-left: 10px;\n  padding-right: 10px; }\n\n.b-button {\n  display: inline-block;\n  padding: 0.3em 1em;\n  margin-bottom: 0;\n  font-size: 0.88em;\n  line-height: 1.4em;\n  color: #333333;\n  background-color: #f5f5f5;\n  background-image: linear-gradient(to bottom, #ffffff, #e6e6e6);\n  background-repeat: repeat-x;\n  border: 1px solid #bbbbbb;\n  border-radius: 4px;\n  user-select: none; }\n  .b-button:active {\n    background-image: none;\n    outline: 0;\n    box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125); }\n\n.b-header {\n  margin-bottom: 1em; }\n\n.b-label {\n  padding: 0 1em;\n  border-radius: 0.5em;\n  color: white; }\n  .b-label[data-step-progress=to-do] {\n    background: #b94a48; }\n    .b-label[data-step-progress=to-do]:before {\n      content: 'To do'; }\n  .b-label[data-step-progress=in-progress] {\n    background: #f89406; }\n    .b-label[data-step-progress=in-progress]:before {\n      content: 'In progress'; }\n  .b-label[data-step-progress=done] {\n    background: #468847; }\n    .b-label[data-step-progress=done]:before {\n      content: 'Done'; }\n\n.b-task {\n  position: relative;\n  width: 100%;\n  margin-top: 1em;\n  margin-bottom: 1em;\n  padding: 10px;\n  border: 1px solid #bbbbbb;\n  border-radius: 4px; }\n  .b-task--complete {\n    background-color: #bae5bb; }\n  .b-task__title {\n    margin-bottom: 0.5em;\n    word-wrap: break-word; }\n    .b-task__title[contentEditable=true] {\n      border-radius: 3px;\n      border: 1px solid #cccccc;\n      transition: border linear 0.2s, box-shadow linear 0.2s;\n      box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6);\n      border-color: rgba(82, 168, 236, 0.8);\n      outline: 0; }\n  .b-task__delete-task {\n    float: right;\n    margin-left: 10px;\n    min-width: 45px; }\n  .b-task__progress {\n    float: right; }\n    @media (min-width: 768px) {\n      .b-task__progress {\n        width: 115px; } }\n  .b-task__step {\n    position: relative;\n    margin-bottom: 1em; }\n    .b-task__step:after {\n      content: '.';\n      display: block;\n      height: 0;\n      clear: both;\n      visibility: hidden; }\n  .b-task__name-step {\n    margin-left: 1em;\n    min-height: 30px;\n    padding-top: 0.3em;\n    word-wrap: break-word; }\n  .b-task__status-step {\n    float: right;\n    margin-top: 0.5em; }\n    @media (min-width: 768px) {\n      .b-task__status-step {\n        width: 150px; } }\n  .b-task__delete-step {\n    float: right;\n    margin-left: 10px;\n    min-width: 45px; }\n", ""]);
+exports.push([module.i, "i {\n  pointer-events: none; }\n\nh1 {\n  font-size: 160%; }\n\nh2 {\n  font-size: 140%; }\n\nh3 {\n  font-size: 100%; }\n\n.b-body {\n  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;\n  font-size: 0.0625px;\n  font-size: 1em; }\n  @media (min-width: 768px) {\n    .b-body {\n      font-size: 0.07031px;\n      font-size: 1.125em; } }\n  @media (min-width: 1024px) {\n    .b-body {\n      font-size: 0.07813px;\n      font-size: 1.25em; } }\n\n.wrapper {\n  max-width: 960px;\n  margin-left: auto;\n  margin-right: auto;\n  padding-left: 10px;\n  padding-right: 10px; }\n\n.b-button {\n  display: inline-block;\n  padding: 0.3em 1em;\n  margin-bottom: 0;\n  font-size: 0.88em;\n  line-height: 1.4em;\n  color: #333333;\n  background-color: #f5f5f5;\n  background-image: linear-gradient(to bottom, #ffffff, #e6e6e6);\n  background-repeat: repeat-x;\n  border: 1px solid #bbbbbb;\n  border-radius: 4px;\n  user-select: none; }\n  .b-button:active {\n    background-image: none;\n    outline: 0;\n    box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125); }\n\n.b-header {\n  margin-bottom: 1em; }\n\n.b-label {\n  padding: 0 1em;\n  border-radius: 0.5em;\n  color: white; }\n  .b-label[data-step-progress=to-do] {\n    background: #b94a48; }\n    .b-label[data-step-progress=to-do]:before {\n      content: 'To do'; }\n  .b-label[data-step-progress=in-progress] {\n    background: #f89406; }\n    .b-label[data-step-progress=in-progress]:before {\n      content: 'In progress'; }\n  .b-label[data-step-progress=done] {\n    background: #468847; }\n    .b-label[data-step-progress=done]:before {\n      content: 'Done'; }\n\n.b-task {\n  position: relative;\n  width: 100%;\n  margin-top: 1em;\n  margin-bottom: 1em;\n  padding: 10px;\n  border: 1px solid #bbbbbb;\n  border-radius: 4px; }\n  .b-task--complete {\n    background-color: #bae5bb; }\n  .b-task__title {\n    margin-bottom: 0.5em;\n    word-wrap: break-word; }\n    .b-task__title[contentEditable=true] {\n      border-radius: 3px;\n      border: 1px solid #cccccc;\n      transition: border linear 0.2s, box-shadow linear 0.2s;\n      box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6);\n      border-color: rgba(82, 168, 236, 0.8);\n      outline: 0; }\n  .b-task__delete-task {\n    float: right;\n    margin-left: 10px;\n    min-width: 45px; }\n  .b-task__progress {\n    float: right; }\n    @media (min-width: 768px) {\n      .b-task__progress {\n        width: 115px; } }\n  .b-task__step {\n    position: relative;\n    margin-bottom: 1em; }\n    .b-task__step:after {\n      content: '.';\n      display: block;\n      height: 0;\n      clear: both;\n      visibility: hidden; }\n  .b-task__name-step {\n    margin-left: 1em;\n    min-height: 30px;\n    padding-top: 0.3em;\n    word-wrap: break-word; }\n  .b-task__status-step {\n    float: right;\n    margin-top: 0.5em; }\n    @media (min-width: 768px) {\n      .b-task__status-step {\n        width: 150px; } }\n  .b-task__delete-step {\n    float: right;\n    margin-left: 10px;\n    min-width: 45px; }\n", ""]);
 
 // exports
 
 
 /***/ }),
-/* 4 */
+/* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(Buffer) {/*
@@ -197,10 +409,10 @@ function toComment(sourceMap) {
   return '/*# ' + data + ' */';
 }
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(8).Buffer))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(11).Buffer))
 
 /***/ }),
-/* 5 */
+/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*
@@ -237,7 +449,7 @@ var stylesInDom = {},
 	singletonElement = null,
 	singletonCounter = 0,
 	styleElementsInsertedAtTop = [],
-	fixUrls = __webpack_require__(6);
+	fixUrls = __webpack_require__(9);
 
 module.exports = function(list, options) {
 	if(typeof DEBUG !== "undefined" && DEBUG) {
@@ -496,7 +708,7 @@ function updateLink(linkElement, options, obj) {
 
 
 /***/ }),
-/* 6 */
+/* 9 */
 /***/ (function(module, exports) {
 
 
@@ -591,7 +803,7 @@ module.exports = function (css) {
 
 
 /***/ }),
-/* 7 */
+/* 10 */
 /***/ (function(module, exports) {
 
 var g;
@@ -618,7 +830,7 @@ module.exports = g;
 
 
 /***/ }),
-/* 8 */
+/* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -632,9 +844,9 @@ module.exports = g;
 
 
 
-var base64 = __webpack_require__(9)
-var ieee754 = __webpack_require__(10)
-var isArray = __webpack_require__(11)
+var base64 = __webpack_require__(12)
+var ieee754 = __webpack_require__(13)
+var isArray = __webpack_require__(14)
 
 exports.Buffer = Buffer
 exports.SlowBuffer = SlowBuffer
@@ -2412,10 +2624,10 @@ function isnan (val) {
   return val !== val // eslint-disable-line no-self-compare
 }
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(7)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(10)))
 
 /***/ }),
-/* 9 */
+/* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2536,7 +2748,7 @@ function fromByteArray (uint8) {
 
 
 /***/ }),
-/* 10 */
+/* 13 */
 /***/ (function(module, exports) {
 
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
@@ -2626,7 +2838,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
 
 /***/ }),
-/* 11 */
+/* 14 */
 /***/ (function(module, exports) {
 
 var toString = {}.toString;
@@ -2637,170 +2849,117 @@ module.exports = Array.isArray || function (arr) {
 
 
 /***/ }),
-/* 12 */
+/* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-;(function () {
-    var PROGRESS_STEP = ['to-do', 'in-progress', 'done'];
-    var $taskList = {};
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
 
-    function initTasks() {
-        $taskList = $('.js-task-list');
-        var tasks = JSON.parse(localStorage.getItem('db')).tasks || { tasks: [] };
-        tasks.forEach(function (task) {
-            var $task = showTask(task);
-            $.data($task, 'id', task.id);
-            $.data($task, 'name', task.name);
-            $taskList.append($task);
-        });
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-        $('body').on('click', '.js-task__new-task', function () {
-            return $taskList.append(newTask);
-        });
-        $taskList.on('click', '.js-task__delete-task', deleteTask);
-        $taskList.on('click', '.js-task__new-step', newStep);
-        $taskList.on('click', '.js-task__delete-step', deleteStep);
-        $taskList.on('click', '.js-task__up-progress', upProgress);
-        $taskList.on('dblclick', '.js-text-edit', nameEdit);
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var DB = function () {
+    function DB() {
+        _classCallCheck(this, DB);
+
+        this.tasks = [];
     }
 
-    function newTask() {
-        var $taskList = $('.js-task-list');
-        var newID = 0;
-        $taskList.children('.js-task').each(function () {
-            var curID = $(this).data('id');
-            if (curID >= newID) {
-                newID = curID + 1;
+    _createClass(DB, [{
+        key: 'connect',
+        value: function connect() {
+            var stringData = localStorage.getItem('db');
+            if (stringData && stringData !== 'undefined') {
+                this.tasks = JSON.parse(stringData).tasks || [];
+            } else {
+                this.tasks = [];
             }
-        });
-
-        var task = {
-            id: newID,
-            name: 'Task ' + (newID + 1)
-        };
-        $taskList.append(showTask(task));
-        saveDb();
-    }
-
-    function showTask(task) {
-        task.steps = task.steps || [];
-
-        var $task = $('<article class=\'b-task js-task\' id=\'task[' + task.id + ']\'>\n                        <button class=\'b-task__delete-task b-button js-task__delete-task\'><i class="fa fa-times fa-lg"></i></i></button>\n                        <h2 class=\'b-task__progress js-task_progress\'></h2>\n                        <h2 class=\'b-task__title js-text-edit\'>' + task.name + '</h2>\n                        <!--<input class=\'b-task__title js-text-edit\' value=\'' + task.name + '\'>-->\n                        <ul class=\'b-task__steps-list js-step-list\'>\n                        </ul>\n                        <button class=\'b-button js-task__new-step\'><i class="fa fa-plus-circle" aria-hidden="true"></i> New step</button>\n                    </article>');
-        $task.data('id', task.id);
-        $task.data('name', task.name);
-
-        var $stepList = $task.find('.js-step-list');
-        task.steps.forEach(function (step) {
-            $stepList.append(showStep(step));
-        });
-        updateTaskProgress($task);
-        return $task;
-    }
-
-    function deleteTask() {
-        var $task = $(this).parent('.js-task');
-        $task.remove();
-        saveDb();
-    }
-
-    function updateTaskProgress($source) {
-        var $task = $source.closest('.js-task');
-        var $taskProgress = $task.find('.js-task_progress');
-        var allSteps = $task.find('.js-step').length;
-        var completeSteps = $task.find('[data-step-progress="done"]').length;
-        $taskProgress.text(allSteps ? completeSteps + '/' + allSteps : '-/-');
-        $task.toggleClass('b-task--complete', allSteps > 0 && allSteps === completeSteps);
-    }
-
-    function newStep() {
-        var $stepList = $(this).siblings('.js-step-list');
-        var newID = 0;
-        $stepList.children('.js-step').each(function () {
-            var curID = $(this).data('id');
-            if (curID >= newID) {
-                newID = curID + 1;
-            }
-        });
-        var step = {
-            id: newID,
-            name: 'Step ' + (newID + 1),
-            progress: PROGRESS_STEP[0]
-        };
-
-        $stepList.append(showStep(step));
-        var $task = $stepList.closest('.js-task');
-        updateTaskProgress($task);
-        saveDb();
-    }
-
-    function showStep(step) {
-        var $step = $('<li class=\'b-task__step js-step\' id=\'step[' + step.id + ']\'>\n                        <button class=\'b-task__delete-step b-button js-task__delete-step\'><i class="fa fa-trash-o fa-lg"></i></button>\n                        <div class=\'b-task__status-step\'>\n                            <span class=\'b-label js-task__up-progress\' data-step-progress=\'' + step.progress + '\'></span>\n                        </div>\n                        <h3 class=\'b-task__name-step js-text-edit\'>' + step.name + '</h3>\n                    </li>');
-        $step.data('id', step.id);
-        $step.data('name', step.name);
-        $step.data('progress', step.progress);
-
-        return $step;
-    }
-
-    function upProgress() {
-        var $this = $(this);
-        var $task = $this.closest('.js-task');
-        var oldProgress = $this.attr('data-step-progress');
-        var newProgress = PROGRESS_STEP[(PROGRESS_STEP.findIndex(function (x) {
-            return x === oldProgress;
-        }) + 1) % PROGRESS_STEP.length];
-        $this.attr('data-step-progress', newProgress);
-        updateTaskProgress($task);
-        saveDb();
-    }
-
-    function deleteStep() {
-        var $this = $(this);
-        var $task = $this.closest('.js-task');
-        var $step = $this.closest('.b-task__step');
-        $step.remove();
-        updateTaskProgress($task);
-        saveDb();
-    }
-
-    function nameEdit() {
-        var $this = $(this);
-        var $input = $('<input type=\'text\' value=\'' + $this.text() + '\'>');
-        $input.addClass($this.attr('class'));
-        $this.hide().after($input);
-        $input.focus();
-        $input.on('change blur', function () {
-            if ($input.val() === '') {
-                $input.val('_');
-            }
-            $this.show().text($input.val());
-            $input.remove();
-            $this.closest('.js-task, .js-step').data('name', $input.val());
-            saveDb();
-        });
-    }
-
-    function saveDb() {
-        var db = { tasks: [] };
-        $taskList.find('.js-task').each(function () {
-            var $this = $(this);
-            var task = $this.data();
-            task.steps = [];
-            $this.find('.js-step').each(function () {
-                var $this = $(this);
-                var step = $this.data();
-                task.steps.push(step);
+        }
+    }, {
+        key: 'save',
+        value: function save() {
+            localStorage.setItem('db', JSON.stringify({ tasks: this.tasks }));
+        }
+    }, {
+        key: 'newTask',
+        value: function newTask() {
+            var newId = maxID(this.tasks) + 1;
+            var task = {
+                id: newId,
+                name: 'Task ' + (newId + 1),
+                steps: []
+            };
+            this.tasks.push(task);
+            return task;
+        }
+    }, {
+        key: 'getTask',
+        value: function getTask(id) {
+            return this.tasks.find(function (e) {
+                return e.id === id;
             });
-            db.tasks.push(task);
-        });
-        localStorage.setItem('db', JSON.stringify(db));
-    }
+        }
+    }, {
+        key: 'deleteTask',
+        value: function deleteTask(id) {
+            var index = this.tasks.findIndex(function (e) {
+                return e.id === id;
+            });
+            if (index === -1) {
+                return [];
+            }
+            return this.tasks.splice(index, 1);
+        }
+    }, {
+        key: 'newStep',
+        value: function newStep(taskId) {
+            var task = this.getTask(taskId);
+            var newId = maxID(task.steps) + 1;
+            var step = {
+                id: newId,
+                name: 'Step ' + (newId + 1),
+                progress: 'to-do'
+            };
+            task.steps.push(step);
+            return step;
+        }
+    }, {
+        key: 'getStep',
+        value: function getStep(taskId, id) {
+            var task = this.getTask(taskId);
+            return task.steps.find(function (e) {
+                return e.id === id;
+            });
+        }
+    }, {
+        key: 'deleteStep',
+        value: function deleteStep(taskId, id) {
+            var task = this.getTask(taskId);
+            var index = task.steps.findIndex(function (e) {
+                return e.id === id;
+            });
+            if (index === -1) {
+                return [];
+            }
+            return task.steps.splice(index, 1);
+        }
+    }]);
 
-    $(document).ready(initTasks);
-})();
+    return DB;
+}();
+
+function maxID(arr) {
+    return arr.reduce(function (res, e) {
+        return e.id > res ? e.id : res;
+    }, -1);
+}
+
+exports.default = DB;
 
 /***/ })
 /******/ ]);

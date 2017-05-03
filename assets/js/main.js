@@ -105,9 +105,9 @@ exports.textEdit = textEdit;
 "use strict";
 
 
-var _taskList = __webpack_require__(5);
+var _taskList = __webpack_require__(6);
 
-var _db = __webpack_require__(15);
+var _db = __webpack_require__(4);
 
 var _db2 = _interopRequireDefault(_db);
 
@@ -126,10 +126,10 @@ $(document).ready(function () {
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(6);
+var content = __webpack_require__(7);
 if(typeof content === 'string') content = [[module.i, content, '']];
 // add the styles to the DOM
-var update = __webpack_require__(8)(content, {});
+var update = __webpack_require__(9)(content, {});
 if(content.locals) module.exports = content.locals;
 // Hot Module Replacement
 if(false) {
@@ -165,6 +165,132 @@ __webpack_require__(2);
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _stepList = __webpack_require__(5);
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var DB = function () {
+    function DB() {
+        _classCallCheck(this, DB);
+
+        this.tasks = [];
+    }
+
+    _createClass(DB, [{
+        key: 'connect',
+        value: function connect() {
+            var stringData = localStorage.getItem('db');
+            if (stringData && stringData !== 'undefined') {
+                this.tasks = JSON.parse(stringData).tasks || [];
+            } else {
+                this.tasks = [];
+            }
+        }
+    }, {
+        key: 'save',
+        value: function save() {
+            localStorage.setItem('db', JSON.stringify({ tasks: this.tasks }));
+        }
+    }, {
+        key: 'newTask',
+        value: function newTask() {
+            var newId = maxID(this.tasks) + 1;
+            var task = {
+                id: newId,
+                name: 'Task ' + (newId + 1),
+                steps: []
+            };
+            this.tasks.push(task);
+            return task;
+        }
+    }, {
+        key: 'getTask',
+        value: function getTask(id) {
+            return this.tasks.find(function (e) {
+                return e.id === id;
+            });
+        }
+    }, {
+        key: 'deleteTask',
+        value: function deleteTask(id) {
+            var index = this.tasks.findIndex(function (e) {
+                return e.id === id;
+            });
+            if (index === -1) {
+                return [];
+            }
+            return this.tasks.splice(index, 1);
+        }
+    }, {
+        key: 'getProgressTask',
+        value: function getProgressTask(taskId) {
+            var steps = this.getTask(taskId).steps;
+            return {
+                all: steps.length,
+                complete: steps.filter(function (e) {
+                    return e.progress === _stepList.PROGRESS_STEP[_stepList.PROGRESS_STEP.length - 1];
+                }).length
+            };
+        }
+    }, {
+        key: 'newStep',
+        value: function newStep(taskId) {
+            var task = this.getTask(taskId);
+            var newId = maxID(task.steps) + 1;
+            var step = {
+                id: newId,
+                name: 'Step ' + (newId + 1),
+                progress: 'to-do'
+            };
+            task.steps.push(step);
+            return step;
+        }
+    }, {
+        key: 'getStep',
+        value: function getStep(taskId, id) {
+            var task = this.getTask(taskId);
+            return task.steps.find(function (e) {
+                return e.id === id;
+            });
+        }
+    }, {
+        key: 'deleteStep',
+        value: function deleteStep(taskId, id) {
+            var task = this.getTask(taskId);
+            var index = task.steps.findIndex(function (e) {
+                return e.id === id;
+            });
+            if (index === -1) {
+                return [];
+            }
+            return task.steps.splice(index, 1);
+        }
+    }]);
+
+    return DB;
+}();
+
+function maxID(arr) {
+    return arr.reduce(function (res, e) {
+        return e.id > res ? e.id : res;
+    }, -1);
+}
+
+exports.default = DB;
+
+/***/ }),
+/* 5 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
 exports.initStepList = exports.PROGRESS_STEP = undefined;
 
 var _libs = __webpack_require__(0);
@@ -191,7 +317,7 @@ function initStepList(_db, $taskList) {
 }
 
 function showStep(step) {
-    var $step = $('<li class=\'b-task__step js-step\' data-step-id=\'' + step.id + '\'>\n                    <button class=\'b-task__delete-step b-button js-step__delete-step\' data-action=\'delete-step\'><i class="fa fa-trash-o fa-lg"></i></button>\n                    <div class=\'b-task__status-step\'>\n                        <span class=\'b-label js-step__up-progress\' data-step-progress=\'' + step.progress + '\' data-action=\'change-step-progress\'></span>\n                    </div>\n                    <h3 class=\'b-task__name-step js-step__name-edit\'>' + step.name + '</h3>\n                </li>');
+    var $step = $('<li class=\'b-task__step js-step\' data-step-id=\'' + step.id + '\'>\n                    <button class=\'b-task__delete-step b-button js-step__delete-step\' data-action=\'delete-step\'>\n                        <i class="fa fa-trash-o fa-lg"></i>\n                    </button>\n                    <div class=\'b-task__status-step\'>\n                        <span class=\'b-label js-step__up-progress\'\n                            data-step-progress=\'' + step.progress + '\' data-action=\'change-step-progress\'></span>\n                    </div>\n                    <h3 class=\'b-task__name-step js-step__name-edit\'>' + step.name + '</h3>\n                </li>');
     return $step;
 }
 
@@ -244,7 +370,7 @@ exports.PROGRESS_STEP = PROGRESS_STEP;
 exports.initStepList = initStepList;
 
 /***/ }),
-/* 5 */
+/* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -257,7 +383,7 @@ exports.initTaskList = undefined;
 
 var _libs = __webpack_require__(0);
 
-var _stepList = __webpack_require__(4);
+var _stepList = __webpack_require__(5);
 
 var $taskList = {};
 var db = void 0;
@@ -273,15 +399,18 @@ function initTaskList(_db) {
 
     $('body').on('click', '.js-task__new-task', newTask);
     (0, _stepList.initStepList)(_db, $taskList, updateTaskProgress);
-    $taskList.on('click', '.js-task', updateTaskProgress);
+    $taskList.on('click', '.js-task', deleteTask);
+    $taskList.on('click', '.js-task', function (event) {
+        return updateTaskProgress($(this), $(event.target).data('action'));
+    });
     $taskList.on('dblclick', '.js-task__edit-name', (0, _libs.textEdit)(nameChange));
 }
 
 function showTask(task) {
     task.steps = task.steps || [];
 
-    var $task = $('<article class=\'b-task js-task\' data-task-id=\'' + task.id + '\'>\n                    <button class=\'b-task__delete-task b-button js-task__delete-task\' data-action=\'delete-task\'><i class="fa fa-times fa-lg"></i></i></button>\n                    <h2 class=\'b-task__progress js-task_progress\'></h2>\n                    <h2 class=\'b-task__title js-task__edit-name\' data-action=\'edit-name-task\'>' + task.name + '</h2>\n                    <!--<input class=\'b-task__title js-text-edit\' value=\'' + task.name + '\'>-->\n                    <ul class=\'b-task__steps-list js-step-list\'>\n                    </ul>\n                    <button class=\'b-button js-step__new-step\' data-action=\'add-step\'><i class="fa fa-plus-circle" aria-hidden="true"></i> New step</button>\n                </article>');
-    updateTaskProgress.call($task, { action: 'change-step-progress' });
+    var $task = $('<article class=\'b-task js-task\' data-task-id=\'' + task.id + '\'>\n                    <button class=\'b-task__delete-task b-button js-task__delete-task\' data-action=\'delete-task\'>\n                        <i class="fa fa-times fa-lg"></i></i>\n                    </button>\n                    <h2 class=\'b-task__progress js-task_progress\'></h2>\n                    <h2 class=\'b-task__title js-task__edit-name\' data-action=\'edit-name-task\'>' + task.name + '</h2>\n                    <!--<input class=\'b-task__title js-text-edit\' value=\'' + task.name + '\'>-->\n                    <ul class=\'b-task__steps-list js-step-list\'>\n                    </ul>\n                    <button class=\'b-button js-step__new-step\' data-action=\'add-step\'>\n                        <i class="fa fa-plus-circle" aria-hidden="true"></i> New step\n                    </button>\n                </article>');
+    updateTaskProgress($task, 'change-step-progress');
     return $task;
 }
 
@@ -297,33 +426,33 @@ function nameChange($this, text) {
     db.save();
 }
 
-function updateTaskProgress(e) {
-    var action = e.action || $(e.target).data('action');
+function deleteTask(event) {
     var $task = $(this);
-    var taskId = $task.data('task-id');
-    if (action === 'delete-step' || action === 'add-step' || action === 'change-step-progress') {
-        var $taskProgress = $task.find('.js-task_progress');
-        var steps = db.getTask(taskId).steps;
-        var allSteps = steps.length;
-        var completeSteps = steps.filter(function (e) {
-            return e.progress === _stepList.PROGRESS_STEP[_stepList.PROGRESS_STEP.length - 1];
-        }).length;
-        $taskProgress.text(allSteps ? completeSteps + '/' + allSteps : '-/-');
-        $task.toggleClass('b-task--complete', allSteps > 0 && allSteps === completeSteps);
-    } else if (action === 'delete-task') {
+    var action = $(event.target).data('action');
+    if (action === 'delete-task') {
         db.deleteTask($task.data('task-id'));
         db.save();
         $task.remove();
     }
 }
 
+function updateTaskProgress($task, action) {
+    var taskId = $task.data('task-id');
+    if (['delete-step', 'add-step', 'change-step-progress'].includes(action)) {
+        var $taskProgress = $task.find('.js-task_progress');
+        var progress = db.getProgressTask(taskId);
+        $taskProgress.text(progress.all ? progress.complete + '/' + progress.all : '-/-');
+        $task.toggleClass('b-task--complete', progress.all > 0 && progress.all === progress.complete);
+    }
+}
+
 exports.initTaskList = initTaskList;
 
 /***/ }),
-/* 6 */
+/* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(7)(undefined);
+exports = module.exports = __webpack_require__(8)(undefined);
 // imports
 
 
@@ -334,7 +463,7 @@ exports.push([module.i, "i {\n  pointer-events: none; }\n\nh1 {\n  font-size: 16
 
 
 /***/ }),
-/* 7 */
+/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(Buffer) {/*
@@ -413,10 +542,10 @@ function toComment(sourceMap) {
   return '/*# ' + data + ' */';
 }
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(11).Buffer))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(12).Buffer))
 
 /***/ }),
-/* 8 */
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*
@@ -453,7 +582,7 @@ var stylesInDom = {},
 	singletonElement = null,
 	singletonCounter = 0,
 	styleElementsInsertedAtTop = [],
-	fixUrls = __webpack_require__(9);
+	fixUrls = __webpack_require__(10);
 
 module.exports = function(list, options) {
 	if(typeof DEBUG !== "undefined" && DEBUG) {
@@ -712,7 +841,7 @@ function updateLink(linkElement, options, obj) {
 
 
 /***/ }),
-/* 9 */
+/* 10 */
 /***/ (function(module, exports) {
 
 
@@ -807,7 +936,7 @@ module.exports = function (css) {
 
 
 /***/ }),
-/* 10 */
+/* 11 */
 /***/ (function(module, exports) {
 
 var g;
@@ -834,7 +963,7 @@ module.exports = g;
 
 
 /***/ }),
-/* 11 */
+/* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -848,9 +977,9 @@ module.exports = g;
 
 
 
-var base64 = __webpack_require__(12)
-var ieee754 = __webpack_require__(13)
-var isArray = __webpack_require__(14)
+var base64 = __webpack_require__(13)
+var ieee754 = __webpack_require__(14)
+var isArray = __webpack_require__(15)
 
 exports.Buffer = Buffer
 exports.SlowBuffer = SlowBuffer
@@ -2628,10 +2757,10 @@ function isnan (val) {
   return val !== val // eslint-disable-line no-self-compare
 }
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(10)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(11)))
 
 /***/ }),
-/* 12 */
+/* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2752,7 +2881,7 @@ function fromByteArray (uint8) {
 
 
 /***/ }),
-/* 13 */
+/* 14 */
 /***/ (function(module, exports) {
 
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
@@ -2842,7 +2971,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
 
 /***/ }),
-/* 14 */
+/* 15 */
 /***/ (function(module, exports) {
 
 var toString = {}.toString;
@@ -2851,119 +2980,6 @@ module.exports = Array.isArray || function (arr) {
   return toString.call(arr) == '[object Array]';
 };
 
-
-/***/ }),
-/* 15 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var DB = function () {
-    function DB() {
-        _classCallCheck(this, DB);
-
-        this.tasks = [];
-    }
-
-    _createClass(DB, [{
-        key: 'connect',
-        value: function connect() {
-            var stringData = localStorage.getItem('db');
-            if (stringData && stringData !== 'undefined') {
-                this.tasks = JSON.parse(stringData).tasks || [];
-            } else {
-                this.tasks = [];
-            }
-        }
-    }, {
-        key: 'save',
-        value: function save() {
-            localStorage.setItem('db', JSON.stringify({ tasks: this.tasks }));
-        }
-    }, {
-        key: 'newTask',
-        value: function newTask() {
-            var newId = maxID(this.tasks) + 1;
-            var task = {
-                id: newId,
-                name: 'Task ' + (newId + 1),
-                steps: []
-            };
-            this.tasks.push(task);
-            return task;
-        }
-    }, {
-        key: 'getTask',
-        value: function getTask(id) {
-            return this.tasks.find(function (e) {
-                return e.id === id;
-            });
-        }
-    }, {
-        key: 'deleteTask',
-        value: function deleteTask(id) {
-            var index = this.tasks.findIndex(function (e) {
-                return e.id === id;
-            });
-            if (index === -1) {
-                return [];
-            }
-            return this.tasks.splice(index, 1);
-        }
-    }, {
-        key: 'newStep',
-        value: function newStep(taskId) {
-            var task = this.getTask(taskId);
-            var newId = maxID(task.steps) + 1;
-            var step = {
-                id: newId,
-                name: 'Step ' + (newId + 1),
-                progress: 'to-do'
-            };
-            task.steps.push(step);
-            return step;
-        }
-    }, {
-        key: 'getStep',
-        value: function getStep(taskId, id) {
-            var task = this.getTask(taskId);
-            return task.steps.find(function (e) {
-                return e.id === id;
-            });
-        }
-    }, {
-        key: 'deleteStep',
-        value: function deleteStep(taskId, id) {
-            var task = this.getTask(taskId);
-            var index = task.steps.findIndex(function (e) {
-                return e.id === id;
-            });
-            if (index === -1) {
-                return [];
-            }
-            return task.steps.splice(index, 1);
-        }
-    }]);
-
-    return DB;
-}();
-
-function maxID(arr) {
-    return arr.reduce(function (res, e) {
-        return e.id > res ? e.id : res;
-    }, -1);
-}
-
-exports.default = DB;
 
 /***/ })
 /******/ ]);

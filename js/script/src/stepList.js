@@ -23,9 +23,12 @@ function initStepList(_db, $taskList) {
 
 function showStep(step) {
     let $step = $(`<li class='b-task__step js-step' data-step-id='${ step.id }'>
-                    <button class='b-task__delete-step b-button js-step__delete-step' data-action='delete-step'><i class="fa fa-trash-o fa-lg"></i></button>
+                    <button class='b-task__delete-step b-button js-step__delete-step' data-action='delete-step'>
+                        <i class="fa fa-trash-o fa-lg"></i>
+                    </button>
                     <div class='b-task__status-step'>
-                        <span class='b-label js-step__up-progress' data-step-progress='${ step.progress }' data-action='change-step-progress'></span>
+                        <span class='b-label js-step__up-progress'
+                            data-step-progress='${ step.progress }' data-action='change-step-progress'></span>
                     </div>
                     <h3 class='b-task__name-step js-step__name-edit'>${ step.name }</h3>
                 </li>`);

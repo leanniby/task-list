@@ -1,3 +1,5 @@
+import { PROGRESS_STEP } from './stepList'
+
 class DB {
     constructor() {
         this.tasks = [];
@@ -37,6 +39,14 @@ class DB {
             return [];
         }
         return this.tasks.splice(index, 1);
+    }
+
+    getProgressTask(taskId) {
+        let steps = this.getTask(taskId).steps;
+        return {
+            all: steps.length,
+            complete: steps.filter(e => e.progress === PROGRESS_STEP[PROGRESS_STEP.length - 1]).length
+        };
     }
 
     newStep(taskId) {

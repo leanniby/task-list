@@ -165,7 +165,7 @@ __webpack_require__(2);
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.showStep = exports.initStepList = exports.PROGRESS_STEP = undefined;
+exports.initStepList = exports.PROGRESS_STEP = undefined;
 
 var _libs = __webpack_require__(0);
 
@@ -174,6 +174,15 @@ var db = void 0;
 
 function initStepList(_db, $taskList) {
     db = _db;
+
+    $taskList.children('.js-task').each(function () {
+        var taskId = $(this).data('task-id');
+        var task = db.getTask(taskId);
+        var $stepList = $(this).find('.js-step-list');
+        task.steps.forEach(function (step) {
+            $stepList.append(showStep(step));
+        });
+    });
 
     $taskList.on('click', '.js-step__new-step', newStep);
     $taskList.on('dblclick', '.js-step__name-edit', (0, _libs.textEdit)(nameChange));
@@ -233,7 +242,6 @@ function deleteStep() {
 
 exports.PROGRESS_STEP = PROGRESS_STEP;
 exports.initStepList = initStepList;
-exports.showStep = showStep;
 
 /***/ }),
 /* 5 */
@@ -274,10 +282,6 @@ function showTask(task) {
 
     var $task = $('<article class=\'b-task js-task\' data-task-id=\'' + task.id + '\'>\n                    <button class=\'b-task__delete-task b-button js-task__delete-task\' data-action=\'delete-task\'><i class="fa fa-times fa-lg"></i></i></button>\n                    <h2 class=\'b-task__progress js-task_progress\'></h2>\n                    <h2 class=\'b-task__title js-task__edit-name\' data-action=\'edit-name-task\'>' + task.name + '</h2>\n                    <!--<input class=\'b-task__title js-text-edit\' value=\'' + task.name + '\'>-->\n                    <ul class=\'b-task__steps-list js-step-list\'>\n                    </ul>\n                    <button class=\'b-button js-step__new-step\' data-action=\'add-step\'><i class="fa fa-plus-circle" aria-hidden="true"></i> New step</button>\n                </article>');
     updateTaskProgress.call($task, { action: 'change-step-progress' });
-    var $stepList = $task.find('.js-step-list');
-    task.steps.forEach(function (step) {
-        $stepList.append((0, _stepList.showStep)(step));
-    });
     return $task;
 }
 

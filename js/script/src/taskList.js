@@ -1,5 +1,5 @@
 import { textEdit } from './libs'
-import { PROGRESS_STEP, initStepList, showStep } from './stepList'
+import { PROGRESS_STEP, initStepList } from './stepList'
 
 let $taskList = {};
 let db;
@@ -32,10 +32,6 @@ function showTask(task) {
                     <button class='b-button js-step__new-step' data-action='add-step'><i class="fa fa-plus-circle" aria-hidden="true"></i> New step</button>
                 </article>`);
     updateTaskProgress.call($task, { action: 'change-step-progress' });
-    let $stepList = $task.find('.js-step-list');
-    task.steps.forEach(function(step) {
-        $stepList.append(showStep(step))
-    });
     return $task;
 }
 

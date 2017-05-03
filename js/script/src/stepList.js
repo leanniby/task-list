@@ -6,6 +6,15 @@ let db;
 function initStepList(_db, $taskList) {
     db = _db;
 
+    $taskList.children('.js-task').each(function () {
+        let taskId = $(this).data('task-id');
+        let task = db.getTask(taskId);
+        let $stepList = $(this).find('.js-step-list');
+        task.steps.forEach(function(step) {
+            $stepList.append(showStep(step))
+        });
+    });
+
     $taskList.on('click', '.js-step__new-step', newStep);
     $taskList.on('dblclick', '.js-step__name-edit', textEdit(nameChange));
     $taskList.on('click', '.js-step__up-progress', upProgress);
@@ -66,4 +75,4 @@ function deleteStep() {
     $step.remove();
 }
 
-export { PROGRESS_STEP, initStepList, showStep };
+export { PROGRESS_STEP, initStepList };

@@ -200,7 +200,7 @@ function nameChange($this, text) {
     var stepId = $step.data('step-id');
     var $task = $step.closest('.js-task');
     var taskId = $task.data('task-id');
-    db.getStep(stepId, taskId).name = text;
+    db.getStep(taskId, stepId).name = text;
     db.save();
 }
 
